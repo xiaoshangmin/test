@@ -80,7 +80,7 @@ if __name__ == "__main__":
     # DEBUG = True
     db = conn('localhost', 'root', '', 'test')
     db.set_charset('utf8')
-
+    # 维基百科地址
     urls = [
         'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(1%E5%8C%BA)',
         'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(2%E5%8C%BA)',
