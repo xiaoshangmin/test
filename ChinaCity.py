@@ -1,11 +1,11 @@
 # -*-coding:utf-8-*-
 __author__ = 'xiaoshangmin'
 from bs4 import BeautifulSoup
-import requests
-import pymysql
-import re
+import requests, pymysql, re, json
 
 DEBUG = False
+GSQL = True
+GJSON = False
 
 
 def conn(localhost, user, password, database):
@@ -23,7 +23,14 @@ def onlyregion(style):
     return re.compile("#EFEFEF").search(str(style))
 
 
-def savedata(db, *val):
+def saveDataAsJson(*val):
+    with open('city.json') as f:
+        data = json.load(f)
+    data.update(json.dump(val))
+    with open('city.json','w') as f:
+        json.load(data,f)
+
+def saveData(db, *val):
     if len(val) == 2:
         sql = "INSERT INTO city(loc_id,loc_name) values(%s,'%s')" % (val[0], val[1])
     elif len(val) == 3:
@@ -41,20 +48,32 @@ def savedata(db, *val):
         db.rollback()
 
 
-def save_area(rs, db):
+# def saveway(lists, db=None):
+#     if (db):
+#         saveData(db, *lists)
+#     else:
+#         saveDataAsJson(*lists)
+
+
+def save_area(rs, db=None):
     for province in rs:
         pinfo = province.find('tr').get_text(',', strip=True)  # 获取省级
         plist = pinfo.split(',')
         upaddr = plist[1]
-        savedata(db, *plist)
+        if GSQL:
+            saveData(db, *plist)
+        else:
+            saveDataAsJson(*plist)
 
         city = province.find_all(style=getcity)  # 获取城市
         if city:
             for c in city:
                 cinfo = c.get_text(',', strip=True).split(',')
-                # cinfo = cinfo.split(',')
                 cinfo.append(upaddr)
-                savedata(db, *cinfo)
+                if GSQL:
+                    saveData(db, *cinfo)
+                else:
+                    saveDataAsJson(*cinfo)
                 code = cinfo[0][:4]
                 county = c.find_next_siblings()
                 for y in county:
@@ -62,7 +81,10 @@ def save_area(rs, db):
                     if yinfo:  # 县级
                         for yy in yinfo:
                             yinfos = [yy, yy.find_next().get_text(), upaddr + cinfo[1]]
-                            savedata(db, *yinfos)
+                            if GSQL:
+                                saveData(db, *yinfos)
+                            else:
+                                saveDataAsJson(*yinfos)
 
         else:
             city = province.find_all(style=onlyregion)  # 获取二级区域
@@ -73,13 +95,17 @@ def save_area(rs, db):
                     ppp = cinfo[c:c + 2]
                     if ppp[0].isdigit():  # 香港无行政区代码不保存
                         ppp.append(upaddr)
-                        savedata(db, *ppp)
+                        if GSQL:
+                            saveData(db, *ppp)
+                        else:
+                            saveDataAsJson(*ppp)
 
 
 if __name__ == "__main__":
     # DEBUG = True
-    db = conn('localhost', 'root', '', 'test')
-    db.set_charset('utf8')
+    GSQL = False
+    # db = conn('localhost', 'root', '', 'test')
+    # db.set_charset('utf8')
     # 维基百科地址
     urls = [
         'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(1%E5%8C%BA)',
@@ -96,5 +122,5 @@ if __name__ == "__main__":
         r.encoding = 'utf-8'
         bs = BeautifulSoup(r.content, 'html.parser')
         rs = bs.find_all('table', class_="wikitable")
-        save_area(rs, db)
-    db.close()
+        save_area(rs)
+    # db.close()
