@@ -24,11 +24,9 @@ def onlyregion(style):
 
 
 def saveDataAsJson(*val):
-    with open('city.json') as f:
-        data = json.load(f)
-    data.update(json.dump(val))
-    with open('city.json','w') as f:
-        json.load(data,f)
+    with open('city.json', 'a') as f:
+        json.dump(val, f)
+
 
 def saveData(db, *val):
     if len(val) == 2:
@@ -63,7 +61,8 @@ def save_area(rs, db=None):
         if GSQL:
             saveData(db, *plist)
         else:
-            saveDataAsJson(*plist)
+            # saveDataAsJson(*plist)
+            pdict = {'code': plist[0], 'name': plist[1]}
 
         city = province.find_all(style=getcity)  # 获取城市
         if city:
@@ -73,7 +72,8 @@ def save_area(rs, db=None):
                 if GSQL:
                     saveData(db, *cinfo)
                 else:
-                    saveDataAsJson(*cinfo)
+                    # saveDataAsJson(*cinfo)
+                    pdict['child'] = {'code': cinfo[0], 'name': cinfo[1]}
                 code = cinfo[0][:4]
                 county = c.find_next_siblings()
                 for y in county:
@@ -84,7 +84,9 @@ def save_area(rs, db=None):
                             if GSQL:
                                 saveData(db, *yinfos)
                             else:
-                                saveDataAsJson(*yinfos)
+                                # saveDataAsJson(*yinfos)
+                                pdict['child']['child'] = {'code': yinfos[0], 'name': yinfos[1]}
+            saveDataAsJson(pdict)
 
         else:
             city = province.find_all(style=onlyregion)  # 获取二级区域
@@ -98,7 +100,8 @@ def save_area(rs, db=None):
                         if GSQL:
                             saveData(db, *ppp)
                         else:
-                            saveDataAsJson(*ppp)
+                            # saveDataAsJson(*ppp)
+                            plist.append(ppp)
 
 
 if __name__ == "__main__":
@@ -109,13 +112,13 @@ if __name__ == "__main__":
     # 维基百科地址
     urls = [
         'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(1%E5%8C%BA)',
-        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(2%E5%8C%BA)',
-        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(3%E5%8C%BA)',
-        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(4%E5%8C%BA)',
-        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(5%E5%8C%BA)',
-        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(6%E5%8C%BA)',
-        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(7%E5%8C%BA)',
-        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(8%E5%8C%BA)'
+        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(2%E5%8C%BA)',
+        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(3%E5%8C%BA)',
+        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(4%E5%8C%BA)',
+        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(5%E5%8C%BA)',
+        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(6%E5%8C%BA)',
+        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(7%E5%8C%BA)',
+        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(8%E5%8C%BA)'
     ]
     for url in urls:
         r = requests.get(url)
@@ -123,4 +126,4 @@ if __name__ == "__main__":
         bs = BeautifulSoup(r.content, 'html.parser')
         rs = bs.find_all('table', class_="wikitable")
         save_area(rs)
-    # db.close()
+        # db.close()
