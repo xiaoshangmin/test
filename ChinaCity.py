@@ -1,19 +1,21 @@
 # -*-coding:utf-8-*-
 __author__ = 'xiaoshangmin'
 from bs4 import BeautifulSoup
-import requests, pymysql, re, json
+import requests, pymysql, re, json, time
 
 DEBUG = False
 GSQL = True
 GJSON = False
+citydata = []
 
-
+# 连接数据库
 def conn(localhost, user, password, database):
     db = pymysql.connect(localhost, user, password, database)
     db.set_charset('utf8')
     return db
 
 
+# 获取省级
 def getprovince(style):
     # pinfo = province.find('tr').get_text(',', strip=True)
     return re.compile("#FFDF80").search(str(style))
@@ -24,16 +26,9 @@ def getcity(style):
     return re.compile("#CCFFFF").search(str(style)) or re.compile("#E6E6FA").search(str(style))
 
 
-# 只有二级区域
-def onlyregion(style):
-    return re.compile("#EFEFEF").search(str(style))
-
-
 def saveDataAsJson(val):
-    with open('city.json', 'a') as f:
-        if f:
-            json.dumps(',', f)
-        json.dump(val, f)
+    with open('city.json', 'a', encoding='utf-8') as f:
+        f.write(json.dumps(val,ensure_ascii=False))
 
 
 def saveData(db, *val):
@@ -61,89 +56,85 @@ def saveData(db, *val):
 #         saveDataAsJson(*lists)
 
 
-def save_area(rs, db=None):
+def save_area(rs, db=None,k=0):
+    i = 0
     for province in rs:
-        pinfo = province.find(style=getprovince)  # 获取省级
+        pinfo = province.find(style=getprovince)
         pinfo = pinfo.get_text(',', strip=True)
         plist = pinfo.split(',')
         upaddr = plist[1]
         if GSQL:
-            # saveData(db, *plist)
-            pass
+            saveData(db, *plist)
         else:
-            # saveDataAsJson(*plist)
-            pdict = [{'code': plist[0], 'name': plist[1]}]
-
-        city = province.find_all(style=getcity)  # 获取城市
+            citydata.append({'code': plist[0], 'name': plist[1], 'child': []})
+        city = province.find_all(style=getcity)
         if city:
-            # pdict[0]['child'] = []
+            j=0
             for c in city:
                 cinfo = c.get_text(',', strip=True).split(',')
                 cinfo.append(upaddr)
                 if GSQL:
-                    # saveData(db, *cinfo)
-                    pass
+                    saveData(db, *cinfo)
                 else:
-                    # saveDataAsJson(*cinfo)
-                    pdict[0]['child'].append({'code': cinfo[0], 'name': cinfo[1]})
+                    citydata[i]['child'].append({'code': cinfo[0], 'name': cinfo[1],'child':[]})
                 code = cinfo[0][:4]
-                county = c.find_next_siblings()
+                county = province.find_all(string=re.compile(code))
+                county.pop(0)
+                cpaddr = cinfo[2] + cinfo[1]
                 for y in county:
-                    yinfo = y.find_all(string=re.compile(code));  # 获取区域
-                    if yinfo:  # 县级
-                        for yy in yinfo:
-                            yinfos = [yy, yy.find_next().get_text(), upaddr + cinfo[1]]
-                            if GSQL:
-                                # saveData(db, *yinfos)
-                                pass
-                            else:
-                                # saveDataAsJson(*yinfos)
-                                # pdict['child']['child'].append({'code': yinfos[0], 'name': yinfos[1]})
-                                pass
-                                # saveDataAsJson(pdict)
+                    yinfo = y.find_next().get_text()
+                    if yinfo:
+                        yinfos = [y, yinfo, cpaddr]
+                        if GSQL:
+                            saveData(db, *yinfos)
+                        else:
+                            citydata[i]['child'][j]['child'].append({'code': y, 'name': yinfo})
+                j=j+1
 
         else:
-            # city = province.find_all(style=onlyregion)  # 获取二级区域
-            city = province.find_all(string=re.compile(str(31)))
+            city = province.find_all(string=re.compile(str(plist[0][0:2])))
+            city.pop(0)
             for c in city:
-                # cinfo = c.get_text(',', strip=True).split(',')
                 cinfo = c.find_next().get_text()
-                if cinfo == '县':
+                if cinfo == '县' or cinfo.isdigit():
                     continue
-                clist = range(0, len(cinfo), 2)
-                for c in clist:
-                    ppp = cinfo[c:c + 2]
-                    # print(ppp)
-                    if ppp[0].isdigit():  # 香港无行政区代码不保存
-                        ppp.append(upaddr)
-                        if GSQL:
-                            # saveData(db, *ppp)
-                            pass
-                        else:
-                            # saveDataAsJson(*ppp)
-                            # plist.append(ppp)
-                            pass
+                data = [c, cinfo, upaddr]
+                if GSQL:
+                    saveData(db, *data)
+                else:
+                    citydata[i]['child'].append({'code':c,'name':cinfo})
+
+        i=i+1
+    saveDataAsJson(citydata)
+
 
 
 if __name__ == "__main__":
-    # DEBUG = True
-    # GSQL = False
+    GSQL = False
+    start = time.clock()
     db = conn('localhost', 'root', '', 'test')
     # 维基百科地址
     urls = [
-        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(1%E5%8C%BA)',
-        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(2%E5%8C%BA)',
+        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(1%E5%8C%BA)',
+        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(2%E5%8C%BA)',
         'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(3%E5%8C%BA)',
-        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(4%E5%8C%BA)',
-        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(5%E5%8C%BA)',
-        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(6%E5%8C%BA)',
-        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(7%E5%8C%BA)',
-        # 'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(8%E5%8C%BA)'
+        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(4%E5%8C%BA)',
+        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(5%E5%8C%BA)',
+        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(6%E5%8C%BA)',
+        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(7%E5%8C%BA)',
+        'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(8%E5%8C%BA)'
     ]
     for url in urls:
+        k=0
         r = requests.get(url)
         r.encoding = 'utf-8'
         bs = BeautifulSoup(r.content, 'html.parser')
         rs = bs.find_all('table', class_="wikitable")
-        save_area(rs, db)
+        if GSQL:
+            save_area(rs, db)
+        else:
+            save_area(rs,k)
+        k=k+1
     db.close()
+    end = time.clock()
+    print('run time is %.03f seconds' % (end - start))
