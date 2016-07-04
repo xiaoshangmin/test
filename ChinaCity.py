@@ -2,7 +2,7 @@
 """
 
 """
-__author__ = 'xiaoshangmin'
+__author = 'xiaoshangmin'
 from bs4 import BeautifulSoup
 import requests, pymysql, re, json, time
 
