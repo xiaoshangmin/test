@@ -55,28 +55,19 @@ def saveData(db, *val):
 #         saveDataAsJson(*lists)
 
 
-def save_area(rs, db=None):
-    i = 0
-    citydata = []
+def save_area_sql(rs, db=None):
     for province in rs:
         pinfo = province.find(style=getprovince)
         pinfo = pinfo.get_text(',', strip=True)
         plist = pinfo.split(',')
         upaddr = plist[1]
-        if GSQL:
-            saveData(db, *plist)
-        else:
-            citydata.append({'code': plist[0], 'name': plist[1], 'child': []})
+        saveData(db, *plist)
         city = province.find_all(style=getcity)
         if city:
-            j=0
             for c in city:
                 cinfo = c.get_text(',', strip=True).split(',')
                 cinfo.append(upaddr)
-                if GSQL:
-                    saveData(db, *cinfo)
-                else:
-                    citydata[i]['child'].append({'code': cinfo[0], 'name': cinfo[1],'upaddr':upaddr,'child':[]})
+                saveData(db, *cinfo)
                 code = cinfo[0][:4]
                 county = province.find_all(string=re.compile(code))
                 county.pop(0)
@@ -85,11 +76,8 @@ def save_area(rs, db=None):
                     yinfo = y.find_next().get_text()
                     if yinfo:
                         yinfos = [y, yinfo, cpaddr]
-                        if GSQL:
-                            saveData(db, *yinfos)
-                        else:
-                            citydata[i]['child'][j] ['child'].append({'code': y, 'name': yinfo,'upaddr':cpaddr})
-                j=j+1
+                        saveData(db, *yinfos)
+
 
         else:
             city = province.find_all(string=re.compile(str(plist[0][0:2])))
@@ -99,20 +87,56 @@ def save_area(rs, db=None):
                 if cinfo == '县' or cinfo.isdigit():
                     continue
                 data = [c, cinfo, upaddr]
-                if GSQL:
-                    saveData(db, *data)
-                else:
-                    citydata[i]['child'].append({'code':c,'name':cinfo,'upaddr':upaddr})
+                saveData(db, *data)
 
-        i=i+1
+
+
+def save_area_json(rs):
+    i = 0
+    citydata = []
+    for province in rs:
+        pinfo = province.find(style=getprovince)
+        pinfo = pinfo.get_text(',', strip=True)
+        plist = pinfo.split(',')
+        upaddr = plist[1]
+        citydata.append({'code': plist[0], 'name': plist[1], 'child': []})
+        city = province.find_all(style=getcity)
+        if city:
+            j = 0
+            for c in city:
+                cinfo = c.get_text(',', strip=True).split(',')
+                cinfo.append(upaddr)
+                citydata[i]['child'].append({'code': cinfo[0], 'name': cinfo[1], 'upaddr': upaddr, 'child': []})
+                code = cinfo[0][:4]
+                county = province.find_all(string=re.compile(code))
+                county.pop(0)
+                cpaddr = cinfo[2] + cinfo[1]
+                for y in county:
+                    yinfo = y.find_next().get_text()
+                    if yinfo:
+                        # yinfos = [y, yinfo, cpaddr]
+                        citydata[i]['child'][j]['child'].append({'code': y, 'name': yinfo, 'upaddr': cpaddr})
+                j = j + 1
+
+        else:
+            city = province.find_all(string=re.compile(str(plist[0][0:2])))
+            city.pop(0)
+            for c in city:
+                cinfo = c.find_next().get_text()
+                if cinfo == '县' or cinfo.isdigit():
+                    continue
+                # data = [c, cinfo, upaddr]
+                citydata[i]['child'].append({'code': c, 'name': cinfo, 'upaddr': upaddr})
+
+        i = i + 1
     return citydata
-
 
 
 if __name__ == "__main__":
     GSQL = False
     start = time.clock()
-    #db = conn('localhost', 'root', '', 'test')
+    if GSQL:
+        db = conn('localhost', 'root', '', 'test')
     # 维基百科地址
     urls = [
         'https://zh.wikipedia.org/wiki/%E4%B8%AD%E5%8D%8E%E4%BA%BA%E6%B0%91%E5%85%B1%E5%92%8C%E5%9B%BD%E8%A1%8C%E6%94%BF%E5%8C%BA%E5%88%92%E4%BB%A3%E7%A0%81_(1%E5%8C%BA)',
@@ -131,12 +155,13 @@ if __name__ == "__main__":
         bs = BeautifulSoup(r.content, 'html.parser')
         rs = bs.find_all('table', class_="wikitable")
         if GSQL:
-            save_area(rs, db)
+            save_area_sql(rs, db)
         else:
-            data = save_area(rs)
+            data = save_area_json(rs)
             for n in range(0,len(data)):
                 c.append(data[n])
-    saveDataAsJson(c)
+    if GSQL:
+        saveDataAsJson(c)
     #db.close()
     end = time.clock()
     print('run time is %.03f seconds' % (end - start))
