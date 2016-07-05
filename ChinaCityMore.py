@@ -37,4 +37,4 @@ while 1:
 file.close()
 db.close()
 end = time.clock()
-print('run time is %.03f seconds' % (end-start))
+print('run time is %.03f seconds' % (end-start))#About half an hour
