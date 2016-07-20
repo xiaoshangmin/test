@@ -8,3 +8,5 @@
     city.json | 城市json文件
     inscawler.py | 下载ins上的图片
 	qrcode|一个简单的谷歌浏览器插件 生成当前窗口地址的二维码
+	
+	城市联动demo:[https://xiaoshangmin.com/quiz/city.php](https://xiaoshangmin.com/quiz/city.php)
